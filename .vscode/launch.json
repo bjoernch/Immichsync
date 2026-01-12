@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:immich-desktop}",
+            "name": "Debug ImmichBackupPicker",
+            "target": "ImmichBackupPicker",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ImmichBackupPicker"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:immich-desktop}",
+            "name": "Release ImmichBackupPicker",
+            "target": "ImmichBackupPicker",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ImmichBackupPicker"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:immich-desktop}",
+            "name": "Debug ImmichSync",
+            "target": "ImmichSync",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ImmichSync"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:immich-desktop}",
+            "name": "Release ImmichSync",
+            "target": "ImmichSync",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ImmichSync"
+        }
+    ]
+}
