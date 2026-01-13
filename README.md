@@ -5,6 +5,9 @@
 
   <p>
     <a href="#readme">README</a> ·
+    <a href="#install-unsigned-build">Install</a> ·
+    <a href="#dev-build">Dev Build</a> ·
+    <a href="#how-it-works">How It Works</a> ·
     <a href="#contributing">Contributing</a> ·
     <a href="#license">MIT License</a>
   </p>
@@ -25,7 +28,7 @@
 
 ## README
 
-ImmichSync keeps a local copy of your Immich assets, and can watch a folder to upload new files back to your server. It’s designed for fast, reliable syncing with clear status and safety controls.
+ImmichSync keeps a local copy of your Immich assets and can watch a local folder to upload new files back to your server. It is designed for reliable syncing with clear status, safety controls, and a menu bar companion.
 
 <p align="center">
   <img src="assets/app-screenshot.png" alt="ImmichSync app screenshot" width="900" />
@@ -37,64 +40,94 @@ ImmichSync keeps a local copy of your Immich assets, and can watch a folder to u
 2) Open the DMG/ZIP and drag `ImmichSync.app` to `/Applications`.  
 3) If macOS blocks it, right‑click the app → **Open**, or allow it in System Settings → Privacy & Security.
 
-## Manual dev build
+## Dev build
+
+### Run from source (debug)
 
 ```bash
 swift run
 ```
 
-## Build a clickable app
+### Build a clickable app bundle
 
 ```bash
 ./scripts/build-app.sh
 ```
 
-The app bundle will be at `dist/ImmichSync.app`.
+Output: `dist/ImmichSync.app`
 
-## How it works and configuration
-
-### Core features
-- Download assets with filters (photos/videos), optional album filter, and folder structure rules.
-- Upload watcher for a local folder (with queue + live sync).
-- Scheduling and background launch agent support.
-- Menu bar status with sync controls.
-
-### Immich API permissions (minimum)
-Grant only what you use. Recommended minimal set:
-- `asset.read` (list/search assets, read metadata)
-- `asset.download` (download originals)
-- `asset.upload` (upload files)
-- `album.read` (only if you use album filtering)
-- `duplicate.read` (only if you use the duplicates view)
-- `server.about` (or equivalent server info permission for version display)
-
-If you disable uploads, you can drop `asset.upload`. If you disable duplicates, drop `duplicate.read`. If you disable album filtering, drop `album.read`.
-
-### Credentials and security
-- API key is saved locally only when you click **Save API Key**.
-- Keychain storage is available only when Touch ID is enabled.
-- Touch ID gating is optional and protects access to the app UI.
-
-### Storage locations
-- Preferences: `UserDefaults`
-- App data: `~/Library/Application Support/ImmichSync`
-- Keychain entry: service name `ImmichSync` (if enabled)
-
-### Release packaging (unsigned)
+### Build release ZIP/DMG
 
 ```bash
 ./scripts/package-release.sh
 ```
 
-Creates `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`.
+Outputs: `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`
 
-### GitHub Releases (automatic)
+### Troubleshooting local builds
 
-Push a tag like `v0.1.0` and GitHub Actions will build and attach the ZIP/DMG to a published release.
+- If assets or permissions look wrong, delete the app data folder:
+  `~/Library/Application Support/ImmichSync`
+- If the menu bar icon does not update, quit and relaunch the app.
+- If macOS blocks the app, use **Open** from the right‑click menu.
+
+## How it works
+
+### Core features
+- Download assets with filters (photos/videos), album filters, and folder structure rules.
+- Upload watcher for a local folder (queue + live sync).
+- Menu bar status with quick controls.
+- Scheduling + background launch agent for unattended syncs.
+- Speed stats, status lists, and sync history.
+- Optional server duplicate checking before upload.
+
+### Download behavior
+- Supports flat, year, and year/month folder structures.
+- Optional sidecar metadata JSON.
+- Optional integrity verification (size + checksum).
+- Local duplicate scan with a safety cap for large libraries.
+
+### Upload behavior
+- Watches the selected folder and optional subfolders.
+- Server-side duplicate check can skip already uploaded items.
+- Local upload history prevents re-uploads unless cleared.
+- All uploads go to the main Immich timeline.
+
+### Connection checks
+- Quick validation of server URL and API key.
+- Displays which features are available based on permissions.
+
+## Permissions
+
+Grant only what you use. Recommended minimum set:
+- `asset.read` (list/search assets, metadata)
+- `asset.download` (download originals)
+- `asset.upload` (upload files)
+- `album.read` (only if you use album filters)
+- `duplicate.read` (only if you use the duplicates view)
+- `server.about` (server info/version display)
+
+If you disable uploads, drop `asset.upload`. If you disable duplicates, drop `duplicate.read`. If you disable album filtering, drop `album.read`.
+
+## Credentials and security
+
+- API key is saved locally only after you click **Save API Key**.
+- Keychain storage is available only when Touch ID is enabled.
+- Touch ID gating is optional and protects access to the app UI.
+
+## Storage locations
+
+- Preferences: `UserDefaults`
+- App data: `~/Library/Application Support/ImmichSync`
+- Keychain entry: service name `ImmichSync` (if enabled)
+
+## GitHub Releases (automatic)
+
+Push a tag like `v1.0.0` and GitHub Actions will build and attach ZIP/DMG to a published release.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## Contributing
