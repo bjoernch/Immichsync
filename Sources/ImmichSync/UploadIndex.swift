@@ -34,6 +34,11 @@ final class UploadIndex {
         }
     }
 
+    func clear() {
+        fileIDs.removeAll()
+        save()
+    }
+
     private func load() {
         guard let data = try? Data(contentsOf: fileURL),
               let json = try? JSONSerialization.jsonObject(with: data, options: []),

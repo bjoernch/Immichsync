@@ -26,6 +26,12 @@ struct ContentView: View {
             folderStore.refreshAlbums()
             folderStore.refreshServerInfo()
             folderStore.refreshDuplicates()
+            folderStore.checkConnection()
+        }
+        .onChange(of: folderStore.resetCounter) { _ in
+            apiKeyDraft = ""
+            onboardingStep = .credentials
+            selectedSection = .dashboard
         }
     }
 
@@ -48,11 +54,13 @@ struct ContentView: View {
                 Label("Dashboard", systemImage: "chart.bar.xaxis").tag(AppSection.dashboard)
                 Label("Download", systemImage: "arrow.down.circle").tag(AppSection.download)
                 Label("Upload", systemImage: "arrow.up.circle").tag(AppSection.upload)
+                Label("History", systemImage: "clock.arrow.circlepath").tag(AppSection.history)
             }
             Section("Settings") {
                 Label("Connection", systemImage: "key.horizontal").tag(AppSection.connection)
                 Label("Schedule", systemImage: "calendar").tag(AppSection.schedule)
                 Label("Background", systemImage: "bolt.badge.clock").tag(AppSection.background)
+                Label("Limits", systemImage: "speedometer").tag(AppSection.limits)
             }
             Section("Insights") {
                 Label("Analytics", systemImage: "waveform.path.ecg").tag(AppSection.analytics)
@@ -79,12 +87,16 @@ struct ContentView: View {
                     downloadSection
                 case .upload:
                     uploadSection
+                case .history:
+                    historySection
                 case .connection:
                     connectionSection
                 case .schedule:
                     scheduleSection
                 case .background:
                     backgroundSection
+                case .limits:
+                    limitsSection
                 case .analytics:
                     analyticsSection
                 case .server:
@@ -155,7 +167,7 @@ struct ContentView: View {
                 HStack(spacing: 16) {
                     statTile(title: "Downloaded", value: "\(folderStore.downloadedCount)", subtitle: "assets", color: .blue)
                     statTile(title: "Uploaded", value: "\(folderStore.uploadedCount)", subtitle: "assets", color: .orange)
-                    statTile(title: "Duplicates", value: "\(folderStore.duplicatesCount)", subtitle: "assets", color: .purple)
+                    statTile(title: "Local duplicates", value: "\(folderStore.localDuplicatesCount)", subtitle: "assets", color: .purple)
                 }
             }
 
@@ -180,6 +192,8 @@ struct ContentView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+
+                    transferStatusView
 
                     HStack(spacing: 12) {
                         Spacer()
@@ -272,6 +286,30 @@ struct ContentView: View {
                     }
                     .disabled(!isCredentialDraftValid)
                 }
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    Button("Check Connection") {
+                        checkConnectionWithDraft()
+                    }
+                    .disabled(!isCredentialDraftValid)
+
+                    Button("Check Permissions") {
+                        checkConnectionWithDraft()
+                    }
+                    .disabled(!isCredentialDraftValid)
+                }
+
+                connectionStatusView
+
+                if !folderStore.connectionWarnings.isEmpty {
+                    ForEach(folderStore.connectionWarnings, id: \.self) { warning in
+                        Text("• \(warning)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
     }
@@ -334,25 +372,48 @@ struct ContentView: View {
                         set: { folderStore.updateSkipTrashed($0) }
                     ))
 
-                    HStack(spacing: 12) {
-                        Text("Album")
-                            .frame(width: 60, alignment: .leading)
-
-                        Picker("Album", selection: Binding(
-                            get: { folderStore.selectedAlbumID },
-                            set: { folderStore.updateSelectedAlbumID($0) }
-                        )) {
-                            Text("All assets").tag("")
-                            ForEach(folderStore.albums) { album in
-                                Text("\(album.name) (\(album.assetCount))").tag(album.id)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Albums")
+                                .frame(width: 60, alignment: .leading)
+                            Spacer()
+                            Button("Refresh") {
+                                folderStore.refreshAlbums()
                             }
                         }
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Button("Refresh") {
-                            folderStore.refreshAlbums()
+                        HStack(spacing: 12) {
+                            Button("Select all") {
+                                folderStore.updateSelectedAlbumIDs(folderStore.albums.map { $0.id })
+                            }
+                            Button("Clear") {
+                                folderStore.updateSelectedAlbumIDs([])
+                            }
+                            Text("\(folderStore.selectedAlbumIDs.count) selected")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
                         }
+
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(folderStore.albums) { album in
+                                    Button {
+                                        toggleAlbumSelection(album.id)
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: folderStore.selectedAlbumIDs.contains(album.id) ? "checkmark.square.fill" : "square")
+                                            Text("\(album.name) (\(album.assetCount))")
+                                                .font(.footnote)
+                                                .foregroundStyle(.primary)
+                                            Spacer()
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 160)
                     }
 
                     HStack(spacing: 12) {
@@ -374,6 +435,16 @@ struct ContentView: View {
                     Toggle("Write sidecar metadata JSON", isOn: Binding(
                         get: { folderStore.writeSidecarMetadata },
                         set: { folderStore.updateWriteSidecarMetadata($0) }
+                    ))
+
+                    Toggle("Verify downloads (size + checksum)", isOn: Binding(
+                        get: { folderStore.verifyIntegrity },
+                        set: { folderStore.updateVerifyIntegrity($0) }
+                    ))
+
+                    Toggle("Organize by album (Base/Album Name)", isOn: Binding(
+                        get: { folderStore.organizeByAlbum },
+                        set: { folderStore.updateOrganizeByAlbum($0) }
                     ))
                 }
             }
@@ -405,8 +476,46 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    downloadCompletionView
+
                     if !folderStore.downloadSpeedSamples.isEmpty {
                         SpeedGraphView(samples: folderStore.downloadSpeedSamples, color: .blue)
+                    }
+
+                    if !folderStore.downloadStatusItems.isEmpty {
+                        Divider()
+                        HStack {
+                            Text("Download status")
+                                .font(.footnote.weight(.semibold))
+                            Spacer()
+                            Picker("Show", selection: Binding(
+                                get: { folderStore.downloadStatusLimit },
+                                set: { folderStore.updateDownloadStatusLimit($0) }
+                            )) {
+                                Text("10").tag(10)
+                                Text("20").tag(20)
+                                Text("50").tag(50)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
+                        }
+
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(limitedDownloadStatusItems()) { item in
+                                    HStack {
+                                        Text(item.name)
+                                            .font(.caption)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Text(downloadStatusLabel(item.status))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 180)
                     }
 
                     if let lastSync = folderStore.lastSyncDate {
@@ -460,6 +569,11 @@ struct ContentView: View {
                     set: { folderStore.updateIncludeUploadSubfolders($0) }
                 ))
 
+                Toggle("Check server for duplicates before upload", isOn: Binding(
+                    get: { folderStore.checkServerDuplicatesOnUpload },
+                    set: { folderStore.updateCheckServerDuplicatesOnUpload($0) }
+                ))
+
                 HStack(spacing: 16) {
                     Toggle("Upload photos", isOn: Binding(
                         get: { folderStore.uploadIncludePhotos },
@@ -473,6 +587,26 @@ struct ContentView: View {
                 }
 
                 HStack(spacing: 12) {
+                    Text("Allow list")
+                        .frame(width: 80, alignment: .leading)
+                    TextField("jpg,png,heic", text: Binding(
+                        get: { folderStore.uploadAllowList },
+                        set: { folderStore.updateUploadAllowList($0) }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                }
+
+                HStack(spacing: 12) {
+                    Text("Deny list")
+                        .frame(width: 80, alignment: .leading)
+                    TextField("mov,mp4", text: Binding(
+                        get: { folderStore.uploadDenyList },
+                        set: { folderStore.updateUploadDenyList($0) }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                }
+
+                HStack(spacing: 12) {
                     Spacer()
                     Button(folderStore.isUploading ? "Uploading..." : "Upload Now") {
                         folderStore.startUploadNow()
@@ -483,6 +617,11 @@ struct ContentView: View {
                         folderStore.stopUpload()
                     }
                     .disabled(!folderStore.isUploading)
+
+                    Button("Clear History") {
+                        folderStore.clearUploadHistory()
+                    }
+                    .disabled(folderStore.isUploading)
                 }
 
                 if !folderStore.uploadProgressText.isEmpty {
@@ -497,6 +636,20 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                uploadCompletionView
+
+                if let error = folderStore.uploadLastError, !error.isEmpty {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+
+                if folderStore.uploadLocalDuplicateCount > 0 || folderStore.uploadServerDuplicateCount > 0 {
+                        Text("Already uploaded: \(folderStore.uploadLocalDuplicateCount) · Server duplicates: \(folderStore.uploadServerDuplicateCount)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if !folderStore.uploadSpeedSamples.isEmpty {
                     SpeedGraphView(samples: folderStore.uploadSpeedSamples, color: .orange)
                 }
@@ -507,20 +660,38 @@ struct ContentView: View {
 
                 if !folderStore.uploadQueue.isEmpty {
                     Divider()
-                    Text("Upload queue")
-                        .font(.footnote.weight(.semibold))
+                    HStack {
+                        Text("Upload status")
+                            .font(.footnote.weight(.semibold))
+                        Spacer()
+                        Picker("Show", selection: Binding(
+                            get: { folderStore.uploadStatusLimit },
+                            set: { folderStore.updateUploadStatusLimit($0) }
+                        )) {
+                            Text("10").tag(10)
+                            Text("20").tag(20)
+                            Text("50").tag(50)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                    }
 
-                    ForEach(folderStore.uploadQueue.prefix(8)) { item in
-                        HStack {
-                            Text(URL(fileURLWithPath: item.path).lastPathComponent)
-                                .font(.caption)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(item.status.rawValue.capitalized)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(limitedUploadStatusItems()) { item in
+                                HStack {
+                                    Text(URL(fileURLWithPath: item.path).lastPathComponent)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text(uploadStatusLabel(item))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
+                    .frame(maxHeight: 180)
                 }
             }
         }
@@ -578,8 +749,15 @@ struct ContentView: View {
     }
 
     private var serverSection: some View {
-        SectionCard(title: "Server", subtitle: "Instance status.") {
+        SectionCard(title: "Server", subtitle: "Instance status and credentials.") {
             VStack(alignment: .leading, spacing: 12) {
+                TextField("Server URL (https://immich.example.com)", text: Binding(
+                    get: { folderStore.serverURL },
+                    set: { folderStore.updateServerURL($0) }
+                ))
+                .textFieldStyle(.roundedBorder)
+                .autocorrectionDisabled()
+
                 HStack {
                     Text(folderStore.serverVersion.isEmpty ? "Server version unknown" : "Server \(folderStore.serverVersion)")
                         .font(.footnote)
@@ -589,28 +767,147 @@ struct ContentView: View {
                         folderStore.refreshServerInfo()
                     }
                 }
+
+                SecureField("API key", text: $apiKeyDraft)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Spacer()
+                    Button("Save API Key") {
+                        folderStore.updateApiKey(apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+                    .disabled(!isCredentialDraftValid)
+                }
             }
         }
     }
 
     private var duplicatesSection: some View {
-        SectionCard(title: "Duplicates", subtitle: "Detect duplicates on your server.") {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Groups: \(folderStore.duplicateGroupsCount) · Assets: \(folderStore.duplicatesCount)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                if let checked = folderStore.duplicatesLastChecked {
-                    Text("Last checked: \(checked.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption)
+        SectionCard(title: "Duplicates", subtitle: "Local and server duplicate insights.") {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Local duplicates: \(folderStore.localDuplicatesCount)")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
+
+                    if let checked = folderStore.localDuplicatesLastChecked {
+                        Text("Last scanned: \(checked.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Spacer()
+                        Button("Scan Local Duplicates") {
+                            folderStore.scanLocalDuplicates()
+                        }
+                    }
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Server duplicates: \(folderStore.duplicatesCount) assets · \(folderStore.duplicateGroupsCount) groups")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    if let checked = folderStore.duplicatesLastChecked {
+                        Text("Server checked: \(checked.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Spacer()
+                        Button("Refresh Server Duplicates") {
+                            folderStore.refreshDuplicates()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var historySection: some View {
+        SectionCard(title: "Sync History", subtitle: "Recent download/upload runs.") {
+            VStack(alignment: .leading, spacing: 12) {
+                if folderStore.syncHistory.isEmpty {
+                    Text("No history yet.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(folderStore.syncHistory.prefix(10)) { item in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.type.capitalized)
+                                    .font(.footnote.weight(.semibold))
+                                Text(item.startedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text("D:\(item.downloaded) U:\(item.uploaded) S:\(item.skipped) E:\(item.errors)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 HStack {
                     Spacer()
-                    Button("Refresh Duplicates") {
-                        folderStore.refreshDuplicates()
+                    Button("Clear History") {
+                        folderStore.clearHistory()
                     }
+                    .tint(.red)
+
+                    Button("Export Error Log") {
+                        folderStore.exportErrorLog()
+                    }
+                    .disabled(!folderStore.hasErrorLog)
+                }
+            }
+        }
+    }
+
+    private var limitsSection: some View {
+        SectionCard(title: "Bandwidth & Power", subtitle: "Control transfer limits and power behavior.") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Download limit (MB/s)")
+                    Spacer()
+                    TextField("0", value: Binding(
+                        get: { folderStore.downloadBandwidthLimit },
+                        set: { folderStore.updateDownloadBandwidthLimit($0) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                }
+
+                HStack {
+                    Text("Upload limit (MB/s)")
+                    Spacer()
+                    TextField("0", value: Binding(
+                        get: { folderStore.uploadBandwidthLimit },
+                        set: { folderStore.updateUploadBandwidthLimit($0) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                }
+
+                Toggle("Auto‑pause on battery or Low Power Mode", isOn: Binding(
+                    get: { folderStore.autoPauseOnBattery },
+                    set: { folderStore.updateAutoPauseOnBattery($0) }
+                ))
+
+                Toggle("Enable notifications", isOn: Binding(
+                    get: { folderStore.notificationsEnabled },
+                    set: { folderStore.updateNotificationsEnabled($0) }
+                ))
+
+                if folderStore.isPausedForPower {
+                    Text("Sync paused due to power settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -625,6 +922,11 @@ struct ContentView: View {
 
                 HStack {
                     Spacer()
+                    Button("Export Error Log") {
+                        folderStore.exportErrorLog()
+                    }
+                    .disabled(!folderStore.hasErrorLog)
+
                     Button("Reset App") {
                         folderStore.resetApp()
                     }
@@ -667,6 +969,197 @@ struct ContentView: View {
         guard !samples.isEmpty else { return "0.00 MB/s" }
         let avg = samples.reduce(0, +) / Double(samples.count)
         return String(format: "%.2f MB/s", avg)
+    }
+
+    private var transferStatusView: some View {
+        HStack(spacing: 8) {
+            if folderStore.isDownloading || folderStore.isUploading {
+                ProgressView()
+            } else {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.secondary)
+            }
+            Text(transferStatusText())
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(transferStatusColor())
+        }
+    }
+
+    private func transferStatusText() -> String {
+        if folderStore.isDownloading {
+            return "Transfer active (download)"
+        }
+        if folderStore.isUploading {
+            return "Transfer active (upload)"
+        }
+        return "Idle"
+    }
+
+    private func transferStatusColor() -> Color {
+        if folderStore.isDownloading {
+            return .blue
+        }
+        if folderStore.isUploading {
+            return .orange
+        }
+        return .secondary
+    }
+
+    private var downloadCompletionView: some View {
+        completionView(
+            isActive: folderStore.isDownloading,
+            state: folderStore.downloadCompletionState,
+            idleText: "Download idle",
+            successText: "Download complete",
+            failedText: "Download failed",
+            activeText: "Looking for new data"
+        )
+    }
+
+    private var uploadCompletionView: some View {
+        completionView(
+            isActive: folderStore.isUploading,
+            state: folderStore.uploadCompletionState,
+            idleText: "Upload idle",
+            successText: "Upload complete",
+            failedText: "Upload failed",
+            activeText: "Uploading..."
+        )
+    }
+
+    private func completionView(isActive: Bool, state: BackupFolderStore.CompletionState, idleText: String, successText: String, failedText: String, activeText: String) -> some View {
+        HStack(spacing: 8) {
+            if isActive {
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.85)
+                    .tint(.orange)
+                Text(activeText)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.orange)
+            } else {
+                switch state {
+                case .success:
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(successText)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.green)
+                case .failed:
+                    Image(systemName: "xmark.octagon.fill")
+                        .foregroundStyle(.red)
+                    Text(failedText)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.red)
+                case .idle:
+                    Image(systemName: "circle")
+                        .foregroundStyle(.secondary)
+                    Text(idleText)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func uploadStatusLabel(_ item: BackupFolderStore.UploadQueueItem) -> String {
+        if item.status == .skipped {
+            if let error = item.error, !error.isEmpty {
+                return error
+            }
+            return "Skipped"
+        }
+        switch item.status {
+        case .queued:
+            return "Queued"
+        case .uploading:
+            return "Uploading"
+        case .done:
+            return "Done"
+        case .failed:
+            return "Failed"
+        case .skipped:
+            return "Skipped"
+        }
+    }
+
+    private func downloadStatusLabel(_ status: BackupFolderStore.DownloadStatus) -> String {
+        switch status {
+        case .downloading:
+            return "Downloading"
+        case .done:
+            return "Done"
+        case .skipped:
+            return "Duplicate"
+        case .failed:
+            return "Failed"
+        }
+    }
+
+    private func limitedUploadStatusItems() -> [BackupFolderStore.UploadQueueItem] {
+        let limit = max(1, folderStore.uploadStatusLimit)
+        return Array(folderStore.uploadQueue.suffix(limit)).reversed()
+    }
+
+    private func limitedDownloadStatusItems() -> [BackupFolderStore.DownloadStatusItem] {
+        let limit = max(1, folderStore.downloadStatusLimit)
+        return Array(folderStore.downloadStatusItems.suffix(limit)).reversed()
+    }
+
+    private func toggleAlbumSelection(_ id: String) {
+        var current = folderStore.selectedAlbumIDs
+        if let index = current.firstIndex(of: id) {
+            current.remove(at: index)
+        } else {
+            current.append(id)
+        }
+        folderStore.updateSelectedAlbumIDs(current)
+    }
+
+
+    private var connectionStatusView: some View {
+        HStack(spacing: 8) {
+            if folderStore.isCheckingConnection {
+                ProgressView()
+            } else {
+                Image(systemName: connectionIconName())
+                    .foregroundStyle(connectionIconColor())
+            }
+            Text(folderStore.connectionStatus)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(connectionIconColor())
+        }
+    }
+
+    private func connectionIconName() -> String {
+        switch folderStore.connectionState {
+        case .ok:
+            return "checkmark.circle.fill"
+        case .limited:
+            return "exclamationmark.triangle.fill"
+        case .invalid:
+            return "xmark.octagon.fill"
+        case .checking:
+            return "arrow.triangle.2.circlepath"
+        case .idle:
+            return "questionmark.circle.fill"
+        }
+    }
+
+    private func connectionIconColor() -> Color {
+        switch folderStore.connectionState {
+        case .ok:
+            return .green
+        case .limited:
+            return .orange
+        case .invalid:
+            return .red
+        case .checking:
+            return .blue
+        case .idle:
+            return .secondary
+        }
     }
 
     private var lockView: some View {
@@ -735,9 +1228,32 @@ struct ContentView: View {
                     Spacer()
                     Button("Save & Continue") {
                         folderStore.updateApiKey(apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines))
+                        checkConnectionWithDraft()
                         onboardingStep = .downloadFolder
                     }
                     .disabled(!isCredentialDraftValid)
+                }
+
+                HStack(spacing: 12) {
+                    Button("Check Connection") {
+                        checkConnectionWithDraft()
+                    }
+                    .disabled(!isCredentialDraftValid)
+
+                    Button("Check Permissions") {
+                        checkConnectionWithDraft()
+                    }
+                    .disabled(!isCredentialDraftValid)
+                }
+
+                connectionStatusView
+
+                if !folderStore.connectionWarnings.isEmpty {
+                    ForEach(folderStore.connectionWarnings, id: \.self) { warning in
+                        Text("• \(warning)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -831,15 +1347,23 @@ struct ContentView: View {
         let keyOK = !apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return urlOK && keyOK
     }
+
+    private func checkConnectionWithDraft() {
+        let server = folderStore.serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        folderStore.checkConnection(serverURL: server, apiKey: key)
+    }
 }
 
 private enum AppSection: Hashable {
     case dashboard
     case download
     case upload
+    case history
     case connection
     case schedule
     case background
+    case limits
     case analytics
     case server
     case duplicates

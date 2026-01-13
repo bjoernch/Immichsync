@@ -1,14 +1,43 @@
-# ImmichSync
+<div align="center">
+  <img src="assets/logo.png" width="140" height="140" alt="ImmichSync logo" />
+  <h1>ImmichSync</h1>
+  <p>Fast, local-first backup and upload companion for your Immich server on macOS.</p>
 
-ImmichSync is a macOS app that syncs Immich assets to a local folder and can automatically upload new files back to your server.
+  <p>
+    <a href="#readme">README</a> ·
+    <a href="#contributing">Contributing</a> ·
+    <a href="#license">MIT License</a>
+  </p>
+
+  <p>
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-84cc16" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-12.0%2B-3b82f6" />
+  </p>
+
+  <p>
+    <a href="https://github.com/bjoernch/Immichsync/releases/latest">Download</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/bjoernch/Immichsync/releases">Latest Release</a>
+  </p>
+</div>
+
+---
+
+## README
+
+ImmichSync keeps a local copy of your Immich assets, and can watch a folder to upload new files back to your server. It’s designed for fast, reliable syncing with clear status and safety controls.
+
+<p align="center">
+  <img src="assets/app-screenshot.png" alt="ImmichSync app screenshot" width="900" />
+</p>
 
 ## Install (unsigned build)
 
-1) Download `ImmichSync.dmg` or `ImmichSync.zip` from GitHub Release assets.  
+1) Download `ImmichSync.dmg` or `ImmichSync.zip` from GitHub Releases.  
 2) Open the DMG/ZIP and drag `ImmichSync.app` to `/Applications`.  
 3) If macOS blocks it, right‑click the app → **Open**, or allow it in System Settings → Privacy & Security.
 
-## Build and run locally (dev)
+## Manual dev build
 
 ```bash
 swift run
@@ -52,14 +81,26 @@ If you disable uploads, you can drop `asset.upload`. If you disable duplicates, 
 - Keychain entry: service name `ImmichSync` (if enabled)
 
 ### Release packaging (unsigned)
+
 ```bash
 ./scripts/package-release.sh
 ```
+
 Creates `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`.
 
 ### GitHub Releases (automatic)
+
 Push a tag like `v0.1.0` and GitHub Actions will build and attach the ZIP/DMG to a published release.
+
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
+
+## Contributing
+
+Issues and pull requests are welcome. If you plan a larger change, please open an issue first so we can align on scope and behavior.
+
+## License
+
+MIT License.

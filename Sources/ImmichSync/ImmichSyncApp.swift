@@ -57,23 +57,18 @@ struct MenuBarLabelView: View {
 
     var body: some View {
         let state = syncState()
-        return Label {
-            Text("ImmichSync")
-        } icon: {
-            Image(systemName: state.symbol)
-        }
-        .labelStyle(.titleAndIcon)
-        .foregroundStyle(state.color)
+        return Image(systemName: state.symbol)
+            .foregroundStyle(state.color)
     }
 
     private func syncState() -> (symbol: String, color: Color) {
         if folderStore.isDownloading {
-            return ("arrow.down.circle.fill", .blue)
+            return ("arrow.down", .blue)
         }
-        if folderStore.isUploading {
-            return ("arrow.up.circle.fill", .orange)
+        if folderStore.isUploadTransferring {
+            return ("arrow.up", .orange)
         }
-        return ("circle.dotted", .secondary)
+        return ("circle", .secondary)
     }
 
     

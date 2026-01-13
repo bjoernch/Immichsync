@@ -14,7 +14,9 @@ ZIP_NAME="$APP_NAME.zip"
 
 cd "$ROOT_DIR"
 
-./scripts/build-app.sh
+if [[ "${1:-}" != "--skip-build" ]]; then
+  ./scripts/build-app.sh
+fi
 
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR"

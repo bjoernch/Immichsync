@@ -31,7 +31,7 @@ cat <<PLIST > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleDisplayName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.${APP_NAME}</string>
+    <string>com.bjoernch.ImmichSync</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
@@ -51,3 +51,6 @@ cat <<PLIST > "$CONTENTS_DIR/Info.plist"
 PLIST
 
 echo "Built: $APP_DIR"
+
+# Refresh release artifacts alongside the app bundle
+"$ROOT_DIR/scripts/package-release.sh" --skip-build

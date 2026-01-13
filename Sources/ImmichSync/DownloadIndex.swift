@@ -28,6 +28,11 @@ final class DownloadIndex {
         assetIDs.count
     }
 
+    func clear() {
+        assetIDs.removeAll()
+        save()
+    }
+
     func save() {
         let array = Array(assetIDs)
         if let data = try? JSONSerialization.data(withJSONObject: array, options: []) {
