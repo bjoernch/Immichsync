@@ -23,6 +23,12 @@ swift run
 
 The app bundle will be at `dist/ImmichSync.app`. You can drag it into `/Applications`.
 
+## Install (unsigned build)
+
+1) Download `ImmichSync.dmg` or `ImmichSync.zip` from the GitHub Release assets.  
+2) Open the DMG/ZIP and drag `ImmichSync.app` to `/Applications`.  
+3) If macOS blocks it, right‑click the app → **Open**, or allow it in System Settings → Privacy & Security.
+
 ## Package release assets (unsigned)
 
 ```bash
@@ -30,6 +36,15 @@ The app bundle will be at `dist/ImmichSync.app`. You can drag it into `/Applicat
 ```
 
 This creates `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`.
+
+## GitHub Releases (automatic)
+
+Push a tag like `v0.1.0` and GitHub Actions will build and attach the ZIP/DMG to a published release.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
 
 ## Installing unsigned builds
 
