@@ -36,7 +36,8 @@ ImmichSync keeps a local copy of your Immich assets and can watch a local folder
 
 ## Install (unsigned build)
 
-1) Download `ImmichSync.dmg` or `ImmichSync.zip` from GitHub Releases.  
+1) Download `ImmichSync.dmg` or `ImmichSync.zip` from the latest release:  
+   https://github.com/bjoernch/Immichsync/releases/latest
 2) Open the DMG/ZIP and drag `ImmichSync.app` to `/Applications`.  
 3) If macOS blocks it, right‑click the app → **Open**, or allow it in System Settings → Privacy & Security.
 
@@ -97,17 +98,15 @@ Outputs: `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`
 - Quick validation of server URL and API key.
 - Displays which features are available based on permissions.
 
-## Permissions
+## Permissions (full access)
 
-Grant only what you use. Recommended minimum set:
-- `asset.read` (list/search assets, metadata)
-- `asset.download` (download originals)
-- `asset.upload` (upload files)
-- `album.read` (only if you use album filters)
-- `duplicate.read` (only if you use the duplicates view)
-- `server.about` (server info/version display)
-
-If you disable uploads, drop `asset.upload`. If you disable duplicates, drop `duplicate.read`. If you disable album filtering, drop `album.read`.
+To use all features, grant these API key scopes:
+- `asset.read`
+- `asset.download`
+- `asset.upload`
+- `album.read`
+- `duplicate.read`
+- `server.about`
 
 ## Credentials and security
 
