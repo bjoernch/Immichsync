@@ -30,6 +30,8 @@
 
 ImmichSync keeps a local copy of your Immich assets and can watch a local folder to upload new files back to your server. It is designed for reliable syncing with clear status, safety controls, and a menu bar companion.
 
+Thanks to the Immich team for creating such a wonderful tool. ImmichSync is a community project and is not affiliated with Immich.
+
 <p align="center">
   <img src="assets/app-screenshot.png" alt="ImmichSync app screenshot" width="900" />
 </p>
