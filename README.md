@@ -14,7 +14,7 @@
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/License-MIT-84cc16" />
-    <img alt="macOS" src="https://img.shields.io/badge/macOS-12.0%2B-3b82f6" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-13.0%2B-3b82f6" />
   </p>
 
   <p>
@@ -109,6 +109,10 @@ Outputs: `dist/ImmichSync.zip` and `dist/ImmichSync.dmg`
 ### Connection checks
 - Quick validation of server URL and API key.
 - Displays which features are available based on permissions.
+
+## Minimum macOS version
+
+ImmichSync targets macOS 13.0+.
 
 ## Permissions (full access)
 
