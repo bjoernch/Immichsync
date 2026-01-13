@@ -41,15 +41,15 @@ ImmichSync keeps a local copy of your Immich assets and can watch a local folder
 2) Open the DMG/ZIP and drag `ImmichSync.app` to `/Applications`.  
 3) If macOS blocks it, right‑click the app → **Open**, or allow it in System Settings → Privacy & Security.
 
-### If macOS says the app is damaged
+### If macOS says the app is damaged while copying to /Applications
 
-Run this once after installing:
+1) Run this once:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/ImmichSync.app
 ```
 
-Then open the app again.
+2) Go back to the DMG window and drag `ImmichSync.app` into `/Applications` again. It should copy and open normally.
 
 ## Dev build
 
