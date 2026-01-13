@@ -30,6 +30,17 @@ The app bundle will be at `dist/ImmichSync.app`.
 - Scheduling and background launch agent support.
 - Menu bar status with sync controls.
 
+### Immich API permissions (minimum)
+Grant only what you use. Recommended minimal set:
+- `asset.read` (list/search assets, read metadata)
+- `asset.download` (download originals)
+- `asset.upload` (upload files)
+- `album.read` (only if you use album filtering)
+- `duplicate.read` (only if you use the duplicates view)
+- `server.about` (or equivalent server info permission for version display)
+
+If you disable uploads, you can drop `asset.upload`. If you disable duplicates, drop `duplicate.read`. If you disable album filtering, drop `album.read`.
+
 ### Credentials and security
 - API key is saved locally only when you click **Save API Key**.
 - Keychain storage is available only when Touch ID is enabled.
