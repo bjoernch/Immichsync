@@ -141,6 +141,12 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+If users see the “app is damaged” warning, they can run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/ImmichSync.app
+```
+
 ## Contributing
 
 Issues and pull requests are welcome. If you plan a larger change, please open an issue first so we can align on scope and behavior.
