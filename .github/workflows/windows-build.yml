@@ -14,13 +14,10 @@ jobs:
       - name: Install Swift toolchain
         shell: pwsh
         run: |
-          $zipUrl = "https://download.swift.org/swift-5.9.0-release/windows10/swift-5.9.0-RELEASE/swift-5.9.0-RELEASE-windows10.zip"
-          $zipPath = "$env:TEMP\swift.zip"
-          Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
-          Expand-Archive -Path $zipPath -DestinationPath C:\swift
-          Move-Item -Path C:\swift\swift-5.9.0-RELEASE-windows10\* -Destination C:\swift -Force
-          Remove-Item C:\swift\swift-5.9.0-RELEASE-windows10 -Recurse -Force
-          Add-Content $env:GITHUB_PATH "C:\swift\usr\bin"
+          choco install swift -y
+          $swiftToolchain = Get-ChildItem 'C:\ProgramData\chocolatey\lib\swift\tools' | Sort-Object Name -Descending | Select-Object -First 1
+          $swiftBin = "$($swiftToolchain.FullName)\usr\bin"
+          Add-Content $env:GITHUB_PATH $swiftBin
           swift --version
 
       - name: Set up Rust
