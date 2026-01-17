@@ -1,0 +1,55 @@
+{
+  "$schema": "https://tauri.app/v1/schema.json",
+  "package": {
+    "productName": "ImmichSync",
+    "version": "0.1.0"
+  },
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://127.0.0.1:5173",
+    "distDir": "../dist"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "identifier": "com.bjoernch.immichsync",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/256x256.png",
+        "icons/512x512.png",
+        "icons/1024x1024.png"
+      ]
+    },
+    "systemTray": {
+      "iconPath": "icons/32x32.png"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "ImmichSync",
+        "url": "index.html",
+        "width": 1100,
+        "height": 700,
+        "resizable": true
+      },
+      {
+        "label": "mini",
+        "title": "ImmichSync Mini",
+        "url": "mini.html",
+        "width": 360,
+        "height": 220,
+        "resizable": false,
+        "decorations": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'"
+    },
+    "allowlist": {
+      "all": true
+    }
+  }
+}

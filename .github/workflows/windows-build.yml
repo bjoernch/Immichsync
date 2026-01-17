@@ -1,0 +1,54 @@
+name: Build Windows package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Swift toolchain
+        shell: pwsh
+        run: |
+          $zipUrl = "https://download.swift.org/swift-5.9.0-release/windows10/swift-5.9.0-RELEASE/swift-5.9.0-RELEASE-windows10.zip"
+          $zipPath = "$env:TEMP\swift.zip"
+          Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath C:\swift
+          Move-Item -Path C:\swift\swift-5.9.0-RELEASE-windows10\* -Destination C:\swift -Force
+          Remove-Item C:\swift\swift-5.9.0-RELEASE-windows10 -Recurse -Force
+          Add-Content $env:GITHUB_PATH "C:\swift\usr\bin"
+          swift --version
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          toolchain: stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Build Swift backend for Windows
+        shell: bash
+        run: ./crossplatform/build-windows.sh
+
+      - name: Install Windows UI dependencies
+        run: npm ci
+        working-directory: crossplatform/windows-ui
+
+      - name: Build Windows UI bundle
+        run: npm run tauri build
+        working-directory: crossplatform/windows-ui
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImmichSync Windows release
+          path: |
+            dist/windows/ImmichSync.exe
+            crossplatform/windows-ui/src-tauri/target/release/bundle
