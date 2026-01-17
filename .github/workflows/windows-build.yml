@@ -14,12 +14,39 @@ jobs:
       - name: Install Swift toolchain
         shell: pwsh
         run: |
-          $page = Invoke-WebRequest 'https://swift.org/download/' -UseBasicParsing
-          $match = [regex]::Match($page.Content, 'href="(https://download\.swift\.org/swift-[^"]+windows[^"]+\.zip)"')
-          if (-not $match.Success) {
-            throw 'Unable to find a Windows Swift download link'
+          $jsonUrl = 'https://swift.org/downloads.json'
+          $json = Invoke-WebRequest $jsonUrl -UseBasicParsing | Select-Object -ExpandProperty Content | ConvertFrom-Json
+
+          $matches = [System.Collections.Generic.List[string]]::new()
+          function Gather-Urls($obj) {
+            if ($null -eq $obj) {
+              return
+            }
+
+            if ($obj -is [string]) {
+              if ($obj -match 'https://download\.swift\.org/swift-[^"]+windows[^"]+\.zip') {
+                [void]$matches.Add($obj)
+              }
+              return
+            }
+
+            if ($obj -is [System.Collections.IEnumerable]) {
+              foreach ($item in $obj) {
+                Gather-Urls $item
+              }
+              return
+            }
+
+            foreach ($prop in $obj.psobject.properties) {
+              Gather-Urls $prop.Value
+            }
           }
-          $zipUrl = $match.Groups[1].Value
+
+          Gather-Urls $json
+          if ($matches.Count -eq 0) {
+            throw 'Unable to find a Windows Swift download URL in downloads.json'
+          }
+          $zipUrl = $matches[0]
           $zipPath = "$env:TEMP\swift.zip"
           Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
           Expand-Archive -Path $zipPath -DestinationPath C:\swift -Force
