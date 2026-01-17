@@ -11,10 +11,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Swift
-        uses: apple/swift-actions/setup-swift@v1
-        with:
-          version: 5.9.0
+      - name: Install Swift toolchain
+        shell: pwsh
+        run: |
+          $page = Invoke-WebRequest 'https://swift.org/download/' -UseBasicParsing
+          $match = [regex]::Match($page.Content, 'href="(https://download\.swift\.org/swift-[^"]+windows10[^"]+\.zip)"')
+          if (-not $match.Success) {
+            throw 'Unable to find a Windows Swift download link'
+          }
+          $zipUrl = $match.Groups[1].Value
+          $zipPath = "$env:TEMP\swift.zip"
+          Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath C:\swift -Force
+          $innerDir = Get-ChildItem 'C:\swift' | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+          $swiftBin = "$($innerDir.FullName)\usr\bin"
+          Add-Content $env:GITHUB_PATH $swiftBin
+          swift --version
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
