@@ -39,7 +39,7 @@ jobs:
         run: ./crossplatform/build-windows.sh
 
       - name: Install Windows UI dependencies
-        run: npm ci
+        run: npm install
         working-directory: crossplatform/windows-ui
 
       - name: Build Windows UI bundle
