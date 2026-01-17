@@ -15,7 +15,7 @@ jobs:
         shell: pwsh
         run: |
           $page = Invoke-WebRequest 'https://swift.org/download/' -UseBasicParsing
-          $match = [regex]::Match($page.Content, 'href="(https://download\.swift\.org/swift-[^"]+windows10[^"]+\.zip)"')
+          $match = [regex]::Match($page.Content, 'href="(https://download\.swift\.org/swift-[^"]+windows[^"]+\.zip)"')
           if (-not $match.Success) {
             throw 'Unable to find a Windows Swift download link'
           }
@@ -24,6 +24,9 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
           Expand-Archive -Path $zipPath -DestinationPath C:\swift -Force
           $innerDir = Get-ChildItem 'C:\swift' | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+          if (-not $innerDir) {
+            throw 'Swift archive layout changed; no inner directory found'
+          }
           $swiftBin = "$($innerDir.FullName)\usr\bin"
           Add-Content $env:GITHUB_PATH $swiftBin
           swift --version
