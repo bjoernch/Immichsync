@@ -11,14 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Swift toolchain
-        shell: pwsh
-        run: |
-          choco install swift -y
-          $swiftToolchain = Get-ChildItem 'C:\ProgramData\chocolatey\lib\swift\tools' | Sort-Object Name -Descending | Select-Object -First 1
-          $swiftBin = "$($swiftToolchain.FullName)\usr\bin"
-          Add-Content $env:GITHUB_PATH $swiftBin
-          swift --version
+      - name: Set up Swift
+        uses: apple/swift-actions/setup-swift@v1
+        with:
+          version: 5.9.0
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
